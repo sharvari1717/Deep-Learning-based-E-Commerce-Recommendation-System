@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Improved E‑Commerce Prototype</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Global page wrapper for consistent spacing -->
+    <div class="page">
+      <!-- Header: clear branding, search, and cart summary -->
+      <header class="header">
+        <div class="brand">
+          <span class="brand-logo">🛍</span>
+          <span class="brand-name">ShopEase</span>
+        </div>
+
+        <!-- Search bar supports quick, direct navigation -->
+        <div class="search-wrapper">
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Search for products, brands, categories..."
+            aria-label="Search products"
+          />
+          <div
+            id="searchSuggestions"
+            class="search-suggestions"
+            role="listbox"
+            aria-label="Search suggestions"
+            hidden
+          ></div>
+        </div>
+
+        <!-- Cart indicator gives immediate system feedback -->
+        <button class="cart-indicator" id="cartButton" aria-label="View cart">
+          <span class="cart-label">Cart</span>
+          <span class="cart-count" id="cartCount">0</span>
+        </button>
+      </header>
+
+      <!-- Category pills filled from catalog (Flipkart top-level names) -->
+      <nav
+        id="categoryNav"
+        class="categories"
+        aria-label="Product categories"
+      >
+        <button type="button" class="category-btn active" data-category="all">
+          All
+        </button>
+      </nav>
+
+      <!-- Main layout: filters on the left, products in the middle, cart summary on the right -->
+      <main class="layout">
+        <!-- Filter panel: supports progressive narrowing of results -->
+        <section class="filters" aria-label="Filters">
+          <h2 class="section-title">Filter products</h2>
+          <label class="toggle-row" for="personalizeToggle">
+            <span>Personalized ranking</span>
+            <input id="personalizeToggle" type="checkbox" checked />
+          </label>
+          <div class="filter-group">
+            <label for="recoDiversityRange">Recommendation style</label>
+            <input id="recoDiversityRange" type="range" min="0" max="100" value="35" />
+            <p id="recoStyleHint" class="results-info">
+              More liked items
+            </p>
+          </div>
+
+          <!-- Price filter with clear labels -->
+          <div class="filter-group">
+            <label for="priceFilter">Price range</label>
+            <select id="priceFilter">
+              <option value="all">Any price</option>
+              <option value="0-999">Under ₹1,000</option>
+              <option value="1000-4999">₹1,000 – ₹4,999</option>
+              <option value="5000-9999">₹5,000 – ₹9,999</option>
+              <option value="10000-999999">₹10,000 and above</option>
+            </select>
+          </div>
+
+          <!-- Rating filter uses simple discrete options -->
+          <div class="filter-group">
+            <label for="ratingFilter">Minimum rating</label>
+            <select id="ratingFilter">
+              <option value="all">Any rating</option>
+              <option value="4">4★ and above</option>
+              <option value="3">3★ and above</option>
+              <option value="2">2★ and above</option>
+            </select>
+          </div>
+
+          <!-- Category filter matches header buttons for consistency -->
+          <div class="filter-group">
+            <label for="categoryFilter">Category</label>
+            <select id="categoryFilter">
+              <option value="all">All categories</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="stockFilter">Stock</label>
+            <select id="stockFilter">
+              <option value="all">Any availability</option>
+              <option value="in">In stock</option>
+              <option value="out">Out of stock</option>
+            </select>
+          </div>
+
+          <!-- Clear filters provides easy exit path -->
+          <button id="clearFiltersBtn" class="clear-filters">
+            Clear filters
+          </button>
+          <div id="compareBar" class="compare-bar" hidden>
+            <div class="compare-main">
+              <span class="compare-title">Compare</span>
+              <span id="compareCount" class="results-info">0 selected</span>
+            </div>
+            <div class="compare-actions">
+              <button id="compareOpenBtn" class="compare-btn" disabled>
+                Compare
+              </button>
+              <button id="compareClearBtn" class="compare-btn secondary">
+                Clear
+              </button>
+            </div>
+          </div>
+          <div id="hiddenRecoManager" class="hidden-reco-manager" hidden>
+            <h3 class="section-title">Manage hidden recommendations</h3>
+            <p class="results-info">Unhide items you previously blocked.</p>
+            <div id="hiddenRecoList" class="hidden-reco-list"></div>
+            <button id="clearHiddenRecoBtn" class="clear-filters" type="button">
+              Unhide all
+            </button>
+          </div>
+        </section>
+
+        <!-- Product list: card layout with key info visible at a glance -->
+        <section class="products-section" aria-label="Product list">
+          <div class="products-header">
+            <h2 class="section-title">Products</h2>
+            <p id="resultsInfo" class="results-info"></p>
+          </div>
+          <div id="collectionsWrap" class="collections-wrap" hidden>
+            <div class="products-header">
+              <h3 class="section-title">Collections</h3>
+              <p class="results-info">Quick themes (demo)</p>
+            </div>
+            <div id="collectionsRow" class="collections-row"></div>
+          </div>
+          <div id="recommendationsWrap" class="recommendations-wrap" hidden>
+            <div class="recommendations-header">
+              <h3 class="section-title">Recommended for you</h3>
+              <p
+                id="recommendationsReason"
+                class="recommendations-reason"
+              ></p>
+              <span id="dlModelStatus" class="dl-model-badge dl-loading">⏳ DL model loading…</span>
+            </div>
+            <div
+              id="recommendationsRow"
+              class="recommendations-row"
+              aria-live="polite"
+            ></div>
+          </div>
+          <div id="productsGrid" class="products-grid" aria-live="polite">
+            <!-- Product cards are injected by JavaScript -->
+          </div>
+        </section>
+
+        <!-- Cart summary panel: always-visible overview of selections -->
+        <aside class="cart-panel" aria-label="Shopping cart">
+          <h2 class="section-title">Your cart</h2>
+          <ul id="cartItems" class="cart-items">
+            <!-- Cart items are injected by JavaScript -->
+          </ul>
+          <div class="cart-footer">
+            <div class="cart-total-row">
+              <span>Total</span>
+              <span id="cartTotal">₹0</span>
+            </div>
+            <button class="checkout-btn" disabled id="checkoutBtn">
+              Proceed to checkout (demo)
+            </button>
+          </div>
+          <p class="cart-hint">
+            Items and total update instantly when you add or remove products.
+          </p>
+          <div id="tasteProfileWrap" class="taste-profile-wrap" hidden>
+            <div class="products-header">
+              <h3 class="section-title">Your taste profile</h3>
+              <span id="tasteProfileSubtitle" class="taste-subtitle"></span>
+            </div>
+            <div class="taste-tabs">
+              <button class="taste-tab active" data-tab="categories">Categories</button>
+              <button class="taste-tab" data-tab="brands">Brands</button>
+            </div>
+            <div id="tasteChartCategories" class="taste-chart"></div>
+            <div id="tasteChartBrands" class="taste-chart" hidden></div>
+          </div>
+          <div class="placed-orders-wrap">
+            <div class="products-header">
+              <h3 class="section-title">Placed orders</h3>
+            </div>
+            <ul id="placedOrdersList" class="placed-orders-list"></ul>
+          </div>
+          <div class="placed-orders-wrap">
+            <div class="products-header">
+              <h3 class="section-title">Wishlist / Save for later</h3>
+            </div>
+            <ul id="wishlistList" class="placed-orders-list"></ul>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <!-- Product detail modal: focused view with clear primary action -->
+    <div
+      id="productModal"
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <button class="modal-close" id="modalCloseBtn" aria-label="Close">
+          ✕
+        </button>
+        <div class="modal-body">
+          <div class="modal-image-wrapper">
+            <img id="modalImage" alt="Product image" />
+          </div>
+          <div class="modal-info">
+            <h2 id="modalTitle"></h2>
+            <p id="modalCategory" class="modal-category"></p>
+            <p id="modalDescription" class="modal-description"></p>
+            <div class="modal-meta">
+              <span id="modalRating" class="badge rating-badge"></span>
+              <span id="modalPrice" class="price"></span>
+            </div>
+            <div class="compare-actions">
+              <button id="addToCartBtn" class="primary-btn">
+                Add to cart
+              </button>
+              <button id="saveToWishlistBtn" class="compare-btn secondary" type="button">
+                Save
+              </button>
+            </div>
+            <div id="similarWrap" class="similar-wrap" hidden>
+              <div class="products-header">
+                <h3 class="section-title">Similar items</h3>
+                <p class="results-info">Based on description similarity</p>
+              </div>
+              <div id="similarRow" class="recommendations-row"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="compareModal"
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="compareTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <button class="modal-close" id="compareCloseBtn" aria-label="Close">
+          ✕
+        </button>
+        <div class="modal-body" style="grid-template-columns: 1fr">
+          <div class="modal-info">
+            <h2 id="compareTitle">Compare products</h2>
+            <div id="compareTableWrap" class="compare-table-wrap"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="checkoutModal"
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="checkoutTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <button class="modal-close" id="checkoutCloseBtn" aria-label="Close">
+          ✕
+        </button>
+        <div class="modal-body checkout-body">
+          <div class="modal-info">
+            <h2 id="checkoutTitle">Checkout</h2>
+            <p class="results-info">
+              Complete your details and place order (demo flow).
+            </p>
+            <div class="checkout-form-grid">
+              <label class="checkout-field">
+                <span>Full name</span>
+                <input id="checkoutName" type="text" placeholder="Full name" autocomplete="name" />
+                <small class="field-error" id="checkoutNameError"></small>
+              </label>
+              <label class="checkout-field">
+                <span>Phone number</span>
+                <input id="checkoutPhone" type="tel" placeholder="10-digit phone" autocomplete="tel" />
+                <small class="field-error" id="checkoutPhoneError"></small>
+              </label>
+              <label class="checkout-field checkout-field-wide">
+                <span>Address line</span>
+                <input id="checkoutAddress" type="text" placeholder="House no, street, area" autocomplete="street-address" />
+                <small class="field-error" id="checkoutAddressError"></small>
+              </label>
+              <label class="checkout-field">
+                <span>City</span>
+                <input id="checkoutCity" type="text" placeholder="City" autocomplete="address-level2" />
+                <small class="field-error" id="checkoutCityError"></small>
+              </label>
+              <label class="checkout-field">
+                <span>Pincode</span>
+                <input id="checkoutPincode" type="text" placeholder="6-digit pincode" inputmode="numeric" />
+                <small class="field-error" id="checkoutPincodeError"></small>
+              </label>
+              <label class="checkout-field checkout-field-wide">
+                <span>Payment method</span>
+                <select id="checkoutPayment">
+                  <option value="cod">Cash on Delivery</option>
+                  <option value="upi">UPI</option>
+                  <option value="card">Card</option>
+                </select>
+              </label>
+            </div>
+            <div id="checkoutProgress" class="checkout-progress">
+              <span class="checkout-step active" data-step="details">1. Details</span>
+              <span class="checkout-step" data-step="payment">2. Payment</span>
+              <span class="checkout-step" data-step="confirm">3. Confirm</span>
+            </div>
+            <p id="checkoutStatus" class="checkout-status"></p>
+            <button id="placeOrderBtn" class="primary-btn">Place order</button>
+          </div>
+          <div class="modal-info checkout-summary">
+            <h3 class="section-title">Order summary</h3>
+            <ul id="checkoutItems" class="cart-items"></ul>
+            <div class="cart-total-row">
+              <span>Payable total</span>
+              <span id="checkoutTotal">₹0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="orderDetailsModal"
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="orderDetailsTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <button class="modal-close" id="orderDetailsCloseBtn" aria-label="Close">
+          ✕
+        </button>
+        <div class="modal-body" style="grid-template-columns: 1fr">
+          <div class="modal-info">
+            <h2 id="orderDetailsTitle">Order details</h2>
+            <p id="orderDetailsMeta" class="results-info"></p>
+            <div id="orderDetailsAddress" class="modal-description"></div>
+            <div id="orderDetailsTimeline" class="checkout-progress"></div>
+            <ul id="orderDetailsItems" class="cart-items"></ul>
+            <div class="compare-actions">
+              <button id="orderCancelBtn" class="compare-btn secondary">Cancel order</button>
+              <button id="orderTrackBtn" class="compare-btn">Track package</button>
+              <button id="orderReorderBtn" class="compare-btn">Reorder</button>
+              <button id="orderReturnBtn" class="compare-btn secondary">Request return</button>
+            </div>
+            <div class="checkout-form-grid">
+              <label class="checkout-field checkout-field-wide">
+                <span>Return reason</span>
+                <select id="returnReasonSelect">
+                  <option value="">Select reason</option>
+                  <option value="Damaged item">Damaged item</option>
+                  <option value="Wrong item delivered">Wrong item delivered</option>
+                  <option value="Quality not as expected">Quality not as expected</option>
+                  <option value="No longer needed">No longer needed</option>
+                </select>
+              </label>
+            </div>
+            <p id="orderActionStatus" class="checkout-status"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="products.embed.js"></script>
+    <script src="dl_recommender.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
